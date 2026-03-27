@@ -1,5 +1,6 @@
+import pytest
 from datetime import datetime
-from adapters.base import RawMessage, Message
+from adapters.base import RawMessage, Message, BaseAdapter
 
 def test_raw_message_fields():
     raw = RawMessage(
@@ -18,3 +19,7 @@ def test_message_has_is_owner():
         is_group=False, is_owner=True,
     )
     assert msg.is_owner is True
+
+def test_base_adapter_cannot_be_instantiated():
+    with pytest.raises(TypeError):
+        BaseAdapter()

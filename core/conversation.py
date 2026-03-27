@@ -46,6 +46,8 @@ class ConversationManager:
 
     async def is_duplicate(self, channel: str, message_id: str) -> bool:
         """Returns True if message_id was already processed for this channel."""
+        if message_id is None:
+            return False
         with self._db.session() as s:
             return s.query(ConversationRow).filter_by(
                 channel=channel, message_id=message_id

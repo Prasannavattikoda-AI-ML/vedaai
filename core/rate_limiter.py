@@ -14,7 +14,13 @@ class RateLimiter:
             ).first()
             if row is None:
                 return False
-            return datetime.now(timezone.utc) - row.last_seen.replace(tzinfo=timezone.utc) < self._cooldown
+            last_seen = row.last_seen
+            # Use astimezone to handle both naive (SQLite) and aware (PostgreSQL) datetimes
+            if last_seen.tzinfo is None:
+                last_seen = last_seen.replace(tzinfo=timezone.utc)
+            else:
+                last_seen = last_seen.astimezone(timezone.utc)
+            return datetime.now(timezone.utc) - last_seen < self._cooldown
 
     def record(self, channel: str, sender_id: str) -> None:
         with self._db.session() as s:

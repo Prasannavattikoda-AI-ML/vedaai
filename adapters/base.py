@@ -33,7 +33,11 @@ MessageCallback = Callable[[RawMessage], Awaitable[None]]
 
 
 class BaseAdapter(ABC):
-    channel: str
+    @property
+    @abstractmethod
+    def channel(self) -> str:
+        """Channel name: 'whatsapp' or 'telegram'. Must be defined by concrete adapter."""
+        ...
 
     @abstractmethod
     async def connect(self) -> None: ...

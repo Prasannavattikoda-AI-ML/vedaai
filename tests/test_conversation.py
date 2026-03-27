@@ -59,3 +59,8 @@ async def test_is_duplicate_true_after_save(conv):
     msg = make_msg(message_id="m1")
     await conv.save(msg, role="user")
     assert await conv.is_duplicate("telegram", "m1") is True
+
+@pytest.mark.asyncio
+async def test_is_duplicate_none_message_id_returns_false(conv):
+    # None message_id (assistant responses) must never be treated as duplicates
+    assert await conv.is_duplicate("telegram", None) is False
