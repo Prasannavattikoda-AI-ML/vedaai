@@ -28,7 +28,7 @@ client.on('message', async (msg) => {
     pendingMessages.push({
         message_id: msg.id._serialized,
         from: msg.from,
-        from_name: msg._data.notifyName || msg.from,
+        from_name: msg.notifyName || msg.from,
         chat_id: msg.from,
         body: msg.body,
         timestamp: msg.timestamp,
@@ -46,6 +46,9 @@ app.get('/messages/pending', (req, res) => {
 // Python adapter sends messages via this
 app.post('/send', async (req, res) => {
     const { chat_id, message } = req.body;
+    if (!chat_id || !message) {
+        return res.status(400).json({ status: 'error', reason: 'chat_id and message are required' });
+    }
     try {
         const result = await client.sendMessage(chat_id, message);
         res.json({ status: 'sent', message_id: result.id._serialized });

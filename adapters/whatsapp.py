@@ -23,6 +23,7 @@ class WhatsAppAdapter(BaseAdapter):
         self._polling_interval = polling_interval
         self._callback: MessageCallback | None = None
         self._proc = None
+        self._poll_task = None
         self._running = False
 
     async def on_message(self, callback: MessageCallback) -> None:
@@ -35,13 +36,19 @@ class WhatsAppAdapter(BaseAdapter):
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
         )
-        await self._wait_for_ready(timeout=30)
+        try:
+            await self._wait_for_ready(timeout=30)
+        except Exception:
+            self._proc.terminate()
+            raise
         self._running = True
-        asyncio.create_task(self._poll_loop())
+        self._poll_task = asyncio.create_task(self._poll_loop())
         logger.info("WhatsApp adapter connected")
 
     async def disconnect(self) -> None:
         self._running = False
+        if self._poll_task:
+            self._poll_task.cancel()
         if self._proc:
             self._proc.terminate()
 
@@ -84,18 +91,21 @@ class WhatsAppAdapter(BaseAdapter):
                 ) as resp:
                     messages = await resp.json()
             for m in messages:
-                raw = RawMessage(
-                    channel=self.channel,
-                    chat_id=m["chat_id"],
-                    message_id=m["message_id"],
-                    sender_id=m["from"],
-                    sender_name=m.get("from_name", m["from"]),
-                    text=m["body"],
-                    timestamp=datetime.fromtimestamp(
-                        m["timestamp"], tz=timezone.utc
-                    ),
-                    is_group=m.get("is_group", False),
-                )
-                await self._callback(raw)
+                try:
+                    raw = RawMessage(
+                        channel=self.channel,
+                        chat_id=m["chat_id"],
+                        message_id=m["message_id"],
+                        sender_id=m["from"],
+                        sender_name=m.get("from_name", m["from"]),
+                        text=m["body"],
+                        timestamp=datetime.fromtimestamp(
+                            m["timestamp"], tz=timezone.utc
+                        ),
+                        is_group=m.get("is_group", False),
+                    )
+                    await self._callback(raw)
+                except Exception as e:
+                    logger.warning("WhatsApp: failed to dispatch message %s: %s", m.get("message_id"), e)
         except Exception as e:
             logger.warning("WhatsApp polling error: %s", e)
