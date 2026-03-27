@@ -31,7 +31,7 @@ from adapters.telegram import TelegramAdapter
 
 @pytest.fixture
 def tg():
-    return TelegramAdapter(bot_token="fake_token", owner_id="999")
+    return TelegramAdapter(bot_token="fake_token")
 
 @pytest.mark.asyncio
 async def test_telegram_channel_name(tg):

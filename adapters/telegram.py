@@ -14,7 +14,7 @@ class TelegramAdapter(BaseAdapter):
     def channel(self) -> str:
         return "telegram"
 
-    def __init__(self, bot_token: str, owner_id: str):
+    def __init__(self, bot_token: str):
         self._token = bot_token
         self._callback: MessageCallback | None = None
         self._app: Application | None = None

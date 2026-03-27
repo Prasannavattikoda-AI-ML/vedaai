@@ -52,10 +52,7 @@ async def main():
     )
 
     # Adapters
-    tg = TelegramAdapter(
-        bot_token=cfg["telegram"]["bot_token"],
-        owner_id=cfg["owner"]["telegram"],
-    )
+    tg = TelegramAdapter(bot_token=cfg["telegram"]["bot_token"])
     wa = WhatsAppAdapter(
         bridge_url=cfg["whatsapp"]["bridge_url"],
         bridge_script=cfg["whatsapp"]["bridge_script"],
@@ -87,7 +84,7 @@ async def main():
 
     try:
         await asyncio.Event().wait()   # run forever
-    except (KeyboardInterrupt, asyncio.CancelledError):
+    finally:
         logger.info("Shutting down...")
         await tg.disconnect()
         await wa.disconnect()

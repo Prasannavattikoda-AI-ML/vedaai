@@ -70,10 +70,8 @@ class RAGEngine:
                     }],
                 )
 
-    async def search(self, query: str) -> list[str]:
-        """Returns text chunks with cosine similarity >= min_similarity."""
-        if self._collection.count() == 0:
-            return []
+    def _search_sync(self, query: str) -> list[str]:
+        """Blocking search — encode + ChromaDB query. Called via asyncio.to_thread."""
         n = min(self._top_k, self._collection.count())
         query_embedding = self._model.encode(query).tolist()
         results = self._collection.query(
@@ -88,6 +86,13 @@ class RAGEngine:
             if similarity >= self._min_similarity:
                 chunks.append(doc)
         return chunks
+
+    async def search(self, query: str) -> list[str]:
+        """Returns text chunks with cosine similarity >= min_similarity."""
+        if self._collection.count() == 0:
+            return []
+        import asyncio
+        return await asyncio.to_thread(self._search_sync, query)
 
     async def search_as_string(self, query: str) -> str:
         """Returns chunks joined as a single string for prompt injection."""

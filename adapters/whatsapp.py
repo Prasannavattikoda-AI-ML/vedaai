@@ -49,6 +49,7 @@ class WhatsAppAdapter(BaseAdapter):
         self._running = False
         if self._poll_task:
             self._poll_task.cancel()
+            await asyncio.gather(self._poll_task, return_exceptions=True)
         if self._proc:
             self._proc.terminate()
 
