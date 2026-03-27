@@ -1,6 +1,7 @@
-from datetime import datetime
+from contextlib import contextmanager
+from datetime import datetime, timezone
 from sqlalchemy import (
-    create_engine, Column, Integer, String, DateTime,
+    create_engine, Column, Integer, String, DateTime, Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
@@ -18,8 +19,8 @@ class ConversationRow(Base):
     message_id = Column(String, nullable=True)   # nullable for assistant responses
     sender_id = Column(String, nullable=False)
     role = Column(String, nullable=False)         # "user" | "assistant"
-    content = Column(String, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    content = Column(Text, nullable=False)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         UniqueConstraint("channel", "message_id", name="uq_channel_message_id"),
@@ -31,9 +32,9 @@ class KnowledgeDocRow(Base):
     id = Column(Integer, primary_key=True)
     filename = Column(String, nullable=False)
     chunk_index = Column(Integer, nullable=False)
-    chunk_text = Column(String, nullable=False)
+    chunk_text = Column(Text, nullable=False)
     chunk_hash = Column(String, nullable=False)
-    indexed_at = Column(DateTime, default=datetime.utcnow)
+    indexed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class RateLimitRow(Base):
@@ -46,10 +47,19 @@ class RateLimitRow(Base):
 class Database:
     def __init__(self, url: str):
         self._engine = create_engine(url)
-        self._Session = sessionmaker(bind=self._engine)
+        self._Session = sessionmaker(self._engine)
 
     def create_tables(self) -> None:
         Base.metadata.create_all(self._engine)
 
+    @contextmanager
     def session(self):
-        return self._Session()
+        s = self._Session()
+        try:
+            yield s
+            s.commit()
+        except Exception:
+            s.rollback()
+            raise
+        finally:
+            s.close()
