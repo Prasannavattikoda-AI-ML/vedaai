@@ -1,0 +1,31 @@
+owner:
+  whatsapp: "+91XXXXXXXXXX"
+  telegram: "YOUR_TELEGRAM_USER_ID"
+
+anthropic:
+  api_key: "${ANTHROPIC_API_KEY}"
+  model: "claude-sonnet-4-6"
+
+telegram:
+  bot_token: "${TELEGRAM_BOT_TOKEN}"
+
+whatsapp:
+  mode: "bridge"
+  bridge_url: "http://localhost:3000"
+  bridge_script: "bridge/index.js"
+  polling_interval_seconds: 2
+
+database:
+  url: "sqlite:///vedaai.db"
+
+rag:
+  documents_path: "knowledge/documents"
+  chroma_path: ".chroma"
+  top_k: 3
+  min_similarity: 0.4
+
+conversation:
+  history_window: 20
+
+rate_limiting:
+  auto_reply_cooldown_seconds: 10
