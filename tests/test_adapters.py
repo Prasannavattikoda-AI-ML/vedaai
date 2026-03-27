@@ -95,3 +95,14 @@ async def test_telegram_non_text_message_produces_placeholder(tg):
     callback.assert_called_once()
     raw = callback.call_args[0][0]
     assert raw.text == "[non-text message]"
+
+@pytest.mark.asyncio
+async def test_telegram_ignores_channel_post_without_from_user(tg):
+    """Channel posts have no from_user — should be silently ignored."""
+    callback = AsyncMock()
+    await tg.on_message(callback)
+    mock_update = MagicMock()
+    mock_update.message.text = "Channel post"
+    mock_update.message.from_user = None  # channel posts have no sender
+    await tg._handle_update(mock_update, None)
+    callback.assert_not_called()

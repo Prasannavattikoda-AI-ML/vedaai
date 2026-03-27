@@ -42,3 +42,13 @@ def test_nested_list_resolved(yaml_file):
         cfg = load_settings(yaml_file)
     assert cfg["nested"]["list"][0] == "hello"
     assert cfg["nested"]["list"][1] == "plain"
+
+def test_empty_yaml_returns_empty_dict(tmp_path):
+    f = tmp_path / "empty.yaml"
+    f.write_text("")
+    cfg = load_settings(str(f))
+    assert cfg == {}
+
+def test_missing_file_raises(tmp_path):
+    with pytest.raises(FileNotFoundError, match="Settings file not found"):
+        load_settings(str(tmp_path / "nonexistent.yaml"))

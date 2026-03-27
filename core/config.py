@@ -19,6 +19,11 @@ def _resolve(value):
 
 
 def load_settings(path: str = "config/settings.yaml") -> dict:
-    with open(path) as f:
-        raw = yaml.safe_load(f)
-    return _resolve(raw)
+    try:
+        with open(path) as f:
+            raw = yaml.safe_load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Settings file not found: {path}. Copy .env.example to .env and configure config/settings.yaml.")
+    except yaml.YAMLError as e:
+        raise ValueError(f"Invalid YAML in settings file {path}: {e}")
+    return _resolve(raw or {})

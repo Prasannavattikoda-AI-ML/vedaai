@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 from adapters.base import BaseAdapter, RawMessage, MessageCallback
@@ -16,7 +16,6 @@ class TelegramAdapter(BaseAdapter):
 
     def __init__(self, bot_token: str, owner_id: str):
         self._token = bot_token
-        self._owner_id = owner_id
         self._callback: MessageCallback | None = None
         self._app: Application | None = None
 
@@ -46,8 +45,12 @@ class TelegramAdapter(BaseAdapter):
         if not update.message or not self._callback:
             return
 
+        # Channel posts and anonymous admin actions have no from_user
+        if update.message.from_user is None:
+            return
+
         is_group = update.message.chat.type in GROUP_TYPES
-        timestamp = datetime.utcfromtimestamp(update.message.date.timestamp())
+        timestamp = datetime.fromtimestamp(update.message.date.timestamp(), tz=timezone.utc)
         text = update.message.text if update.message.text else "[non-text message]"
 
         raw = RawMessage(

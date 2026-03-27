@@ -54,12 +54,11 @@ class Gateway:
             else:
                 response = await self._agent.auto_reply_mode(message)
 
-            await self._conv.save(message, role="user")
-            await self._conv.save_response(message, response)
-
+            # Validate adapter exists BEFORE persisting (don't save undelivered conversations)
             adapter = self._adapters.get(message.channel)
             if adapter is None:
-                raise RuntimeError(
-                    f"No adapter registered for channel: {message.channel}"
-                )
+                raise RuntimeError(f"No adapter registered for channel: {message.channel}")
+
+            await self._conv.save(message, role="user")
+            await self._conv.save_response(message, response)
             await adapter.send_message(message.chat_id, response)
