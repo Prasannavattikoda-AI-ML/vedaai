@@ -85,59 +85,63 @@ class ClaudeAgent:
         """Acts as personal assistant for the owner. RAG is tool-accessible, not auto-injected."""
         history = await self._conv.get_history(message.channel, message.chat_id)
         system = f"You are a personal AI assistant for {self._persona.name}. Be concise and direct."
+        user_messages = history + [{"role": "user", "content": message.text}]
 
         try:
             response = await self._client.messages.create(
                 model=self._model,
                 system=system,
-                messages=history + [{"role": "user", "content": message.text}],
+                messages=user_messages,
                 tools=[SEARCH_KNOWLEDGE_TOOL, GET_HISTORY_TOOL],
                 max_tokens=2048,
             )
-            return await self._run_tool_loop(response, message)
+            return await self._run_tool_loop(response, message, user_messages)
         except Exception:
             await asyncio.sleep(2)
             try:
                 response = await self._client.messages.create(
                     model=self._model,
                     system=system,
-                    messages=history + [{"role": "user", "content": message.text}],
+                    messages=user_messages,
                     tools=[SEARCH_KNOWLEDGE_TOOL, GET_HISTORY_TOOL],
                     max_tokens=2048,
                 )
-                return await self._run_tool_loop(response, message)
+                return await self._run_tool_loop(response, message, user_messages)
             except Exception:
                 return FALLBACK_MESSAGE
 
-    async def _run_tool_loop(self, response, message: Message) -> str:
-        """Handles tool_use stop_reason: executes tools and feeds results back to Claude."""
-        messages = [{"role": "user", "content": message.text}]
-
-        while response.stop_reason == "tool_use":
-            tool_results = []
-            for block in response.content:
-                if block.type != "tool_use":
-                    continue
-                result = await self._execute_tool(block.name, block.input, message)
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": result,
-                })
-            messages.append({"role": "assistant", "content": response.content})
-            messages.append({"role": "user", "content": tool_results})
-            response = await self._client.messages.create(
-                model=self._model,
-                system=f"You are a personal AI assistant for {self._persona.name}.",
-                messages=messages,
-                tools=[SEARCH_KNOWLEDGE_TOOL, GET_HISTORY_TOOL],
-                max_tokens=2048,
-            )
+    async def _run_tool_loop(self, response, message: Message, messages: list[dict]) -> str:
+        """Handles tool_use stop_reason. `messages` is the full history + user turn."""
+        try:
+            while response.stop_reason == "tool_use":
+                tool_results = []
+                for block in response.content:
+                    if block.type != "tool_use":
+                        continue
+                    result = await self._execute_tool(block.name, block.input, message)
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result,
+                    })
+                messages = messages + [
+                    {"role": "assistant", "content": response.content},
+                    {"role": "user", "content": tool_results},
+                ]
+                response = await self._client.messages.create(
+                    model=self._model,
+                    system=f"You are a personal AI assistant for {self._persona.name}.",
+                    messages=messages,
+                    tools=[SEARCH_KNOWLEDGE_TOOL, GET_HISTORY_TOOL],
+                    max_tokens=2048,
+                )
+        except Exception:
+            return FALLBACK_MESSAGE   # also fixes: exceptions in tool loop now handled
 
         for block in response.content:
             if block.type == "text":
                 return block.text
-        return "I could not generate a response."
+        return FALLBACK_MESSAGE   # fixes: use constant instead of inline string
 
     async def _execute_tool(self, name: str, inputs: dict, message: Message) -> str:
         """Dispatches a tool call and returns the result as a string."""

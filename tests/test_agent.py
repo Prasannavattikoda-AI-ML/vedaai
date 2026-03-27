@@ -93,3 +93,73 @@ async def test_auto_reply_fallback_after_two_failures(agent):
             result = await agent.auto_reply_mode(make_msg())
     assert "unavailable" in result.lower()
     assert create_mock.call_count == 2
+
+@pytest.mark.asyncio
+async def test_tool_loop_executes_search_knowledge(agent):
+    """_run_tool_loop should call RAG when Claude returns tool_use stop_reason."""
+    tool_use_block = MagicMock()
+    tool_use_block.type = "tool_use"
+    tool_use_block.id = "tu_001"
+    tool_use_block.name = "search_knowledge"
+    tool_use_block.input = {"query": "AI skills"}
+
+    tool_use_response = MagicMock()
+    tool_use_response.stop_reason = "tool_use"
+    tool_use_response.content = [tool_use_block]
+
+    final_block = MagicMock()
+    final_block.type = "text"
+    final_block.text = "Based on the knowledge base, Pandu is an AI engineer."
+    final_response = MagicMock()
+    final_response.stop_reason = "end_turn"
+    final_response.content = [final_block]
+
+    create_mock = AsyncMock(side_effect=[tool_use_response, final_response])
+    with patch.object(agent._client.messages, "create", new=create_mock):
+        result = await agent.assistant_mode(make_msg(is_owner=True, text="What are Pandu's skills?"))
+
+    agent._rag.search_as_string.assert_called_once_with("AI skills")
+    assert "AI engineer" in result
+    assert create_mock.call_count == 2
+
+@pytest.mark.asyncio
+async def test_tool_loop_exception_returns_fallback(agent):
+    """An exception inside the tool loop should return FALLBACK_MESSAGE."""
+    tool_use_block = MagicMock()
+    tool_use_block.type = "tool_use"
+    tool_use_block.id = "tu_002"
+    tool_use_block.name = "search_knowledge"
+    tool_use_block.input = {"query": "test"}
+
+    tool_use_response = MagicMock()
+    tool_use_response.stop_reason = "tool_use"
+    tool_use_response.content = [tool_use_block]
+
+    # Second call (tool result feed-back) raises
+    create_mock = AsyncMock(side_effect=[tool_use_response, Exception("network error")])
+    with patch.object(agent._client.messages, "create", new=create_mock):
+        result = await agent.assistant_mode(make_msg(is_owner=True))
+
+    assert "unavailable" in result.lower()
+
+@pytest.mark.asyncio
+async def test_execute_tool_search_knowledge(agent):
+    agent._rag.search_as_string.return_value = "Pandu works in Hyderabad"
+    msg = make_msg()
+    result = await agent._execute_tool("search_knowledge", {"query": "location"}, msg)
+    assert "Hyderabad" in result
+
+@pytest.mark.asyncio
+async def test_execute_tool_get_history(agent):
+    agent._conv.get_history.return_value = [{"role": "user", "content": "hi"}]
+    msg = make_msg()
+    result = await agent._execute_tool(
+        "get_conversation_history", {"chat_id": "c1", "channel": "telegram", "n": 5}, msg
+    )
+    assert "hi" in result
+
+@pytest.mark.asyncio
+async def test_execute_tool_unknown_returns_error(agent):
+    msg = make_msg()
+    result = await agent._execute_tool("unknown_tool", {}, msg)
+    assert "Unknown tool" in result
