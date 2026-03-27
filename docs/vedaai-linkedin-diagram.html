@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VedaAI Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #0a0f1e;
+  color: #e8eaf0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.card {
+  width: 1200px;
+  height: 628px; /* LinkedIn recommended 1.91:1 */
+  background: linear-gradient(145deg, #0d1225 0%, #0a0f1e 40%, #0f1530 100%);
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+}
+
+/* Background decorations */
+.card::before {
+  content: '';
+  position: absolute;
+  top: -150px; right: -150px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(6, 214, 160, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.card::after {
+  content: '';
+  position: absolute;
+  bottom: -100px; left: -100px;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(123, 97, 255, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Left panel */
+.left {
+  flex: 0 0 420px;
+  padding: 48px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
+
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 32px;
+}
+
+.logo-icon {
+  width: 52px; height: 52px;
+  background: linear-gradient(135deg, #06d6a0, #7b61ff);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #fff;
+}
+
+.logo-text h1 {
+  font-size: 28px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #06d6a0, #00b4d8, #7b61ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+}
+
+.logo-text p {
+  font-size: 12px;
+  color: #8892a8;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.tagline {
+  font-size: 17px;
+  color: #c0c8d8;
+  line-height: 1.65;
+  margin-bottom: 28px;
+  font-weight: 400;
+}
+
+.tagline strong {
+  color: #06d6a0;
+  font-weight: 600;
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13.5px;
+  color: #a0a8b8;
+}
+
+.feature i {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.feature:nth-child(1) i { background: rgba(6, 214, 160, 0.15); color: #06d6a0; }
+.feature:nth-child(2) i { background: rgba(123, 97, 255, 0.15); color: #7b61ff; }
+.feature:nth-child(3) i { background: rgba(0, 180, 216, 0.15); color: #00b4d8; }
+.feature:nth-child(4) i { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.feature:nth-child(5) i { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
+
+.stats-row {
+  display: flex;
+  gap: 28px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-num {
+  font-size: 26px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #06d6a0, #7b61ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* Divider */
+.divider {
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(6, 214, 160, 0.2), rgba(123, 97, 255, 0.2), transparent);
+  margin: 40px 0;
+}
+
+/* Right panel — architecture diagram */
+.right {
+  flex: 1;
+  padding: 36px 40px 36px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.right-title {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.arch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.arch-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+
+.node {
+  background: rgba(17, 26, 48, 0.8);
+  border: 1px solid rgba(6, 214, 160, 0.12);
+  border-radius: 10px;
+  padding: 10px 18px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 130px;
+  transition: all 0.3s;
+}
+
+.node-icon {
+  font-size: 18px;
+  margin-bottom: 2px;
+}
+
+.node-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8eaf0;
+}
+
+.node-detail {
+  font-size: 9.5px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Node colors */
+.node-wa { border-color: rgba(37, 211, 102, 0.25); }
+.node-wa .node-icon { color: #25d366; }
+.node-tg { border-color: rgba(0, 136, 204, 0.25); }
+.node-tg .node-icon { color: #0088cc; }
+.node-gw { border-color: rgba(6, 214, 160, 0.25); background: rgba(6, 214, 160, 0.06); }
+.node-gw .node-icon { color: #06d6a0; }
+.node-ud { border-color: rgba(123, 97, 255, 0.25); }
+.node-ud .node-icon { color: #7b61ff; }
+.node-auto { border-color: rgba(0, 180, 216, 0.25); }
+.node-auto .node-icon { color: #00b4d8; }
+.node-asst { border-color: rgba(123, 97, 255, 0.25); }
+.node-asst .node-icon { color: #7b61ff; }
+.node-claude { border-color: rgba(212, 165, 116, 0.3); background: rgba(212, 165, 116, 0.06); }
+.node-claude .node-icon { color: #d4a574; }
+.node-db { border-color: rgba(6, 214, 160, 0.2); }
+.node-db .node-icon { color: #06d6a0; }
+.node-chroma { border-color: rgba(0, 180, 216, 0.2); }
+.node-chroma .node-icon { color: #00b4d8; }
+
+.arrow {
+  color: #3b4560;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.branch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #4b5568;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.branch-row .label { color: #6b7280; font-size: 10px; }
+
+/* Tech pills at bottom */
+.tech-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 16px;
+  justify-content: center;
+}
+
+.pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.pill-python { color: #3b82f6; border-color: rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.08); }
+.pill-asyncio { color: #a855f7; border-color: rgba(168, 85, 247, 0.3); background: rgba(168, 85, 247, 0.08); }
+.pill-claude { color: #d4a574; border-color: rgba(212, 165, 116, 0.3); background: rgba(212, 165, 116, 0.08); }
+.pill-chroma { color: #00b4d8; border-color: rgba(0, 180, 216, 0.3); background: rgba(0, 180, 216, 0.08); }
+.pill-sql { color: #06d6a0; border-color: rgba(6, 214, 160, 0.3); background: rgba(6, 214, 160, 0.08); }
+.pill-tdd { color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.08); }
+
+/* Author bar */
+.author-bar {
+  position: absolute;
+  bottom: 16px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #4b5568;
+  z-index: 2;
+}
+
+.author-bar i { color: #06d6a0; }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <!-- LEFT PANEL -->
+  <div class="left">
+    <div>
+      <div class="logo-area">
+        <div class="logo-icon"><i class="fas fa-brain"></i></div>
+        <div class="logo-text">
+          <h1>VedaAI</h1>
+          <p>Personal AI Assistant</p>
+        </div>
+      </div>
+
+      <p class="tagline">
+        A <strong>production-grade AI assistant</strong> that auto-replies on
+        WhatsApp &amp; Telegram using Claude, RAG knowledge base, and persona rules
+        &mdash; and acts as your personal AI when you message it.
+      </p>
+
+      <div class="features">
+        <div class="feature">
+          <i class="fas fa-reply-all"></i>
+          <span>Hybrid mode &mdash; auto-reply to others, assistant for you</span>
+        </div>
+        <div class="feature">
+          <i class="fas fa-search"></i>
+          <span>RAG knowledge base with ChromaDB + sentence-transformers</span>
+        </div>
+        <div class="feature">
+          <i class="fas fa-lock"></i>
+          <span>Per-chat locking, rate limiting, message deduplication</span>
+        </div>
+        <div class="feature">
+          <i class="fas fa-vial"></i>
+          <span>84 automated tests &mdash; built entirely with TDD</span>
+        </div>
+        <div class="feature">
+          <i class="fas fa-plug"></i>
+          <span>Modular adapter pattern &mdash; add channels in one file</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat"><span class="stat-num">84</span><span class="stat-label">Tests</span></div>
+      <div class="stat"><span class="stat-num">15</span><span class="stat-label">Modules</span></div>
+      <div class="stat"><span class="stat-num">2</span><span class="stat-label">Channels</span></div>
+      <div class="stat"><span class="stat-num">27</span><span class="stat-label">Commits</span></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- RIGHT PANEL — ARCHITECTURE -->
+  <div class="right">
+    <div class="right-title">System Architecture</div>
+    <div class="arch">
+      <div class="arch-row">
+        <div class="node node-wa">
+          <span class="node-icon"><i class="fab fa-whatsapp"></i></span>
+          <span class="node-name">WhatsApp</span>
+          <span class="node-detail">Node.js Bridge + Polling</span>
+        </div>
+        <div class="node node-tg">
+          <span class="node-icon"><i class="fab fa-telegram"></i></span>
+          <span class="node-name">Telegram</span>
+          <span class="node-detail">python-telegram-bot v20</span>
+        </div>
+      </div>
+      <div class="arrow"><i class="fas fa-arrow-down"></i></div>
+      <div class="node node-gw">
+        <span class="node-icon"><i class="fas fa-route"></i></span>
+        <span class="node-name">Gateway</span>
+        <span class="node-detail">Dedup &middot; Rate Limit &middot; Per-chat Lock</span>
+      </div>
+      <div class="arrow"><i class="fas fa-arrow-down"></i></div>
+      <div class="node node-ud">
+        <span class="node-icon"><i class="fas fa-user-shield"></i></span>
+        <span class="node-name">UserDetector</span>
+        <span class="node-detail">Owner vs. Stranger routing</span>
+      </div>
+      <div class="branch-row">
+        <span class="label">Stranger</span>
+        <i class="fas fa-code-branch"></i>
+        <span class="label">Owner</span>
+      </div>
+      <div class="arch-row">
+        <div class="node node-auto">
+          <span class="node-icon"><i class="fas fa-reply-all"></i></span>
+          <span class="node-name">Auto-Reply</span>
+          <span class="node-detail">Persona + RAG injected</span>
+        </div>
+        <div class="node node-asst">
+          <span class="node-icon"><i class="fas fa-tools"></i></span>
+          <span class="node-name">Assistant</span>
+          <span class="node-detail">Tools: search_knowledge</span>
+        </div>
+      </div>
+      <div class="arrow"><i class="fas fa-arrow-down"></i></div>
+      <div class="node node-claude">
+        <span class="node-icon"><i class="fas fa-bolt"></i></span>
+        <span class="node-name">Claude API</span>
+        <span class="node-detail">AsyncAnthropic &middot; claude-sonnet-4-6</span>
+      </div>
+      <div class="arrow"><i class="fas fa-arrow-down"></i></div>
+      <div class="arch-row">
+        <div class="node node-db">
+          <span class="node-icon"><i class="fas fa-database"></i></span>
+          <span class="node-name">SQLite</span>
+          <span class="node-detail">SQLAlchemy 2.x</span>
+        </div>
+        <div class="node node-chroma">
+          <span class="node-icon"><i class="fas fa-search"></i></span>
+          <span class="node-name">ChromaDB</span>
+          <span class="node-detail">sentence-transformers</span>
+        </div>
+      </div>
+
+      <div class="tech-pills">
+        <span class="pill pill-python">Python 3.9+</span>
+        <span class="pill pill-asyncio">AsyncIO</span>
+        <span class="pill pill-claude">Claude API</span>
+        <span class="pill pill-chroma">ChromaDB</span>
+        <span class="pill pill-sql">SQLAlchemy</span>
+        <span class="pill pill-tdd">84 Tests (TDD)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="author-bar">
+    <i class="fab fa-github"></i> Prasannavattikoda-AI-ML/vedaai
+  </div>
+</div>
+</body>
+</html>
