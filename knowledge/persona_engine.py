@@ -6,11 +6,17 @@ class PersonaEngine:
     def __init__(self, persona_path: str):
         with open(persona_path) as f:
             data = yaml.safe_load(f)
-        self.name: str = data["name"]
+        if "name" not in data:
+            raise ValueError(f"Persona YAML at {persona_path} is missing required field 'name'")
+        self._name: str = data["name"]
         self._tone: str = data.get("tone", "friendly")
         self._language: str = data.get("language", "English")
         self._boundaries: list[str] = data.get("boundaries", [])
         self._rules: list[dict] = data.get("rules", [])
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     def build_prompt(self, incoming_text: str) -> str:
         boundaries_text = "\n".join(f"- {b}" for b in self._boundaries)

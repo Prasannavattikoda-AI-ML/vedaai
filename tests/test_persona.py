@@ -53,3 +53,11 @@ def test_trigger_case_insensitive(engine):
 def test_pipe_trigger_alternation(engine):
     prompt = engine.build_prompt("what is the cost?")
     assert "Redirect to email" in prompt
+
+def test_build_prompt_contains_tone(engine):
+    prompt = engine.build_prompt("hello")
+    assert "friendly" in prompt
+
+def test_build_prompt_contains_language(engine):
+    prompt = engine.build_prompt("hello")
+    assert "English" in prompt

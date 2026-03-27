@@ -38,14 +38,22 @@ class RAGEngine:
             metadata={"hnsw:space": "cosine"},
         )
 
-    def index_documents(self) -> None:
-        """Index all .txt and .md files. Skips unchanged chunks via content hash."""
+    async def index_documents(self) -> None:
+        """Index all .txt and .md files. Runs blocking I/O in a thread executor."""
+        import asyncio
+        await asyncio.to_thread(self._index_documents_sync)
+
+    def _index_documents_sync(self) -> None:
+        """Synchronous implementation — called via asyncio.to_thread."""
         for file_path in self._docs_path.glob("**/*"):
             if file_path.suffix not in (".txt", ".md"):
                 continue
-            text = file_path.read_text(encoding="utf-8")
+            try:
+                text = file_path.read_text(encoding="utf-8", errors="replace")
+            except Exception as e:
+                continue
             for i, chunk in enumerate(_chunk_text(text)):
-                chunk_id = f"{file_path.name}::{i}"
+                chunk_id = f"{file_path.relative_to(self._docs_path)}::{i}"
                 chunk_hash = hashlib.sha256(chunk.encode()).hexdigest()[:16]
                 existing = self._collection.get(ids=[chunk_id])
                 if existing["ids"] and existing["metadatas"][0].get("hash") == chunk_hash:
