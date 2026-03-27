@@ -47,8 +47,8 @@ app.get('/messages/pending', (req, res) => {
 app.post('/send', async (req, res) => {
     const { chat_id, message } = req.body;
     try {
-        await client.sendMessage(chat_id, message);
-        res.json({ status: 'sent' });
+        const result = await client.sendMessage(chat_id, message);
+        res.json({ status: 'sent', message_id: result.id._serialized });
     } catch (err) {
         res.status(500).json({ status: 'error', reason: err.message });
     }

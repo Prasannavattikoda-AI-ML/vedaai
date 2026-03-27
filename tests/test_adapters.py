@@ -119,6 +119,14 @@ def wa():
         polling_interval=0.01,  # fast for tests
     )
 
+@pytest.fixture
+def wa_adapter():
+    return WhatsAppAdapter(
+        bridge_url="http://localhost:3000",
+        bridge_script="bridge/index.js",
+        polling_interval=0.01,
+    )
+
 @pytest.mark.asyncio
 async def test_whatsapp_channel_name(wa):
     assert wa.channel == "whatsapp"
@@ -178,3 +186,41 @@ async def test_whatsapp_poll_error_does_not_crash(wa):
     with patch("aiohttp.ClientSession", return_value=mock_session_cm):
         await wa._poll_once()  # must not raise
     callback.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_whatsapp_connect_raises_on_missing_node(wa_adapter):
+    """connect() raises when node binary is not found (FileNotFoundError)."""
+    wa_adapter._bridge_script = "bridge/index.js"
+    with patch("asyncio.create_subprocess_exec", side_effect=FileNotFoundError("node not found")):
+        with pytest.raises(FileNotFoundError):
+            await wa_adapter.connect()
+    assert wa_adapter._running is False
+
+
+@pytest.mark.asyncio
+async def test_whatsapp_disconnect_terminates_proc(wa_adapter):
+    mock_proc = MagicMock()
+    wa_adapter._proc = mock_proc
+    wa_adapter._running = True
+    await wa_adapter.disconnect()
+    assert wa_adapter._running is False
+    mock_proc.terminate.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_whatsapp_wait_for_ready_timeout(wa_adapter):
+    """_wait_for_ready raises asyncio.TimeoutError if bridge never prints ready."""
+    import asyncio as aio
+    mock_proc = MagicMock()
+    mock_proc.stdout = MagicMock()
+
+    async def never_ready():
+        # yield to event loop so asyncio.wait_for timeout can fire
+        await aio.sleep(0)
+        return b"some other output\n"
+
+    mock_proc.stdout.readline = never_ready
+    wa_adapter._proc = mock_proc
+    with pytest.raises(aio.TimeoutError):
+        await wa_adapter._wait_for_ready(timeout=0.05)

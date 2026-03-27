@@ -29,21 +29,16 @@ class WhatsAppAdapter(BaseAdapter):
         self._callback = callback
 
     async def connect(self) -> None:
-        """Start the Node.js bridge subprocess. Gracefully degrades on failure."""
-        try:
-            self._proc = await asyncio.create_subprocess_exec(
-                "node", self._bridge_script,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-            )
-            await self._wait_for_ready(timeout=30)
-            self._running = True
-            asyncio.create_task(self._poll_loop())
-            logger.info("WhatsApp adapter connected")
-        except (RuntimeError, FileNotFoundError, OSError) as e:
-            logger.warning(
-                "WhatsApp bridge failed to start (%s) — continuing without WhatsApp", e
-            )
+        """Start the Node.js bridge subprocess."""
+        self._proc = await asyncio.create_subprocess_exec(
+            "node", self._bridge_script,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        await self._wait_for_ready(timeout=30)
+        self._running = True
+        asyncio.create_task(self._poll_loop())
+        logger.info("WhatsApp adapter connected")
 
     async def disconnect(self) -> None:
         self._running = False
