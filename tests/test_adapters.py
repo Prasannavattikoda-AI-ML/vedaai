@@ -106,3 +106,75 @@ async def test_telegram_ignores_channel_post_without_from_user(tg):
     mock_update.message.from_user = None  # channel posts have no sender
     await tg._handle_update(mock_update, None)
     callback.assert_not_called()
+
+
+# ── Task 13: WhatsAppAdapter ──────────────────────────────────────────────────
+from adapters.whatsapp import WhatsAppAdapter
+
+@pytest.fixture
+def wa():
+    return WhatsAppAdapter(
+        bridge_url="http://localhost:3000",
+        bridge_script="bridge/index.js",
+        polling_interval=0.01,  # fast for tests
+    )
+
+@pytest.mark.asyncio
+async def test_whatsapp_channel_name(wa):
+    assert wa.channel == "whatsapp"
+
+@pytest.mark.asyncio
+async def test_whatsapp_on_message_registers_callback(wa):
+    callback = AsyncMock()
+    await wa.on_message(callback)
+    assert wa._callback == callback
+
+@pytest.mark.asyncio
+async def test_whatsapp_polls_and_dispatches(wa):
+    callback = AsyncMock()
+    await wa.on_message(callback)
+    bridge_payload = [{
+        "message_id": "WA_001",
+        "from": "+91111",
+        "from_name": "Bob",
+        "chat_id": "91111@c.us",
+        "body": "Hey",
+        "timestamp": 1711500000,
+        "is_group": False,
+    }]
+    # Mock aiohttp ClientSession.get
+    mock_resp = AsyncMock()
+    mock_resp.json = AsyncMock(return_value=bridge_payload)
+    mock_cm = MagicMock()
+    mock_cm.__aenter__ = AsyncMock(return_value=mock_resp)
+    mock_cm.__aexit__ = AsyncMock(return_value=None)
+    mock_session = MagicMock()
+    mock_session.get = MagicMock(return_value=mock_cm)
+    mock_session_cm = MagicMock()
+    mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session_cm.__aexit__ = AsyncMock(return_value=None)
+    with patch("aiohttp.ClientSession", return_value=mock_session_cm):
+        await wa._poll_once()
+    callback.assert_called_once()
+    raw = callback.call_args[0][0]
+    assert raw.channel == "whatsapp"
+    assert raw.text == "Hey"
+    assert raw.message_id == "WA_001"
+    assert raw.is_group is False
+
+@pytest.mark.asyncio
+async def test_whatsapp_poll_once_no_callback_does_nothing(wa):
+    # _poll_once with no callback registered should not raise
+    await wa._poll_once()  # no callback registered
+
+@pytest.mark.asyncio
+async def test_whatsapp_poll_error_does_not_crash(wa):
+    """Network errors during polling should be swallowed gracefully."""
+    callback = AsyncMock()
+    await wa.on_message(callback)
+    mock_session_cm = MagicMock()
+    mock_session_cm.__aenter__ = AsyncMock(side_effect=Exception("connection refused"))
+    mock_session_cm.__aexit__ = AsyncMock(return_value=None)
+    with patch("aiohttp.ClientSession", return_value=mock_session_cm):
+        await wa._poll_once()  # must not raise
+    callback.assert_not_called()
